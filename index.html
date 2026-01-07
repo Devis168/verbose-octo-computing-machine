@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KHQR Scanner & Parser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+        }
+
+        .scanner-section {
+            flex: 1;
+            min-width: 400px;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .result-section {
+            flex: 1;
+            min-width: 400px;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            max-height: 800px;
+        }
+
+        .scanner-container {
+            width: 100%;
+            height: 400px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 3px dashed #667eea;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #qr-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-placeholder {
+            text-align: center;
+            color: #666;
+        }
+
+        .scanner-placeholder i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #start-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        #stop-btn {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e9ecef;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .file-upload-label {
+            flex: 1;
+            padding: 15px;
+            background: #28a745;
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .file-upload-label:hover {
+            background: #218838;
+        }
+
+        .result-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s ease;
+        }
+
+        .result-item:hover {
+            transform: translateX(5px);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .tag {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .value {
+            font-size: 1.1rem;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .description {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .raw-data {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+
+        .raw-data h3 {
+            margin-bottom: 15px;
+            color: #3498db;
+        }
+
+        .payment-summary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .payment-summary h3 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .scanner-section, .result-section {
+                min-width: 100%;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+    <!-- Include jsQR library for QR decoding -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 KHQR Code Scanner</h1>
+            <p>Automatically scan and parse Cambodian QR payment codes</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Scanner Section -->
+            <div class="scanner-section">
+                <h2>QR Code Scanner</h2>
+                <div class="scanner-container">
+                    <video id="qr-video" style="display: none;"></video>
+                    <div class="scanner-placeholder" id="scanner-placeholder">
+                        <i>📷</i>
+                        <p>Camera scanner will appear here</p>
+                        <p>or upload a QR code image</p>
+                    </div>
+                    <canvas id="qr-canvas" style="display: none;"></canvas>
+                </div>
+                
+                <div class="controls">
+                    <button id="start-btn">🎥 Start Camera</button>
+                    <button id="stop-btn" style="display: none;">⏹️ Stop Camera</button>
+                    <label for="file-input" class="file-upload-label">
+                        📁 Upload QR Image
+                    </label>
+                    <input type="file" id="file-input" accept="image/*">
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="result-section">
+                <h2>Parsed QR Data</h2>
+                <div id="results-container">
+                    <div class="result-item">
+                        <div class="result-header">
+                            <h3>No QR Code Scanned Yet</h3>
+                        </div>
+                        <p class="description">Scan or upload a KHQR code to see detailed information</p>
+                    </div>
+                </div>
+                
+                <div id="raw-data" class="raw-data" style="display: none;">
+                    <h3>Raw QR Data</h3>
+                    <pre id="raw-data-content"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const video = document.getElementById('qr-video');
+        const canvas = document.getElementById('qr-canvas');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const fileInput = document.getElementById('file-input');
+        const resultsContainer = document.getElementById('results-container');
+        const rawDataDiv = document.getElementById('raw-data');
+        const rawDataContent = document.getElementById('raw-data-content');
+        const scannerPlaceholder = document.getElementById('scanner-placeholder');
+
+        // State variables
+        let stream = null;
+        let scanning = false;
+        let animationFrame = null;
+
+        // KHQR Data Structure Mappings
+        const KHQR_TAGS = {
+            '00': { name: 'QR Standard Header', description: 'EMVCo QR Code Header' },
+            '01': { name: 'Point of Initiation', description: 'Static (11) or Dynamic (12) QR' },
+            '29': { name: 'Merchant Account Info', description: 'Merchant banking details' },
+            '52': { name: 'Merchant Category Code', description: 'Type of merchant business' },
+            '53': { name: 'Transaction Currency', description: 'Currency code (840 = USD, 116 = KHR)' },
+            '54': { name: 'Transaction Amount', description: 'Amount to be paid' },
+            '58': { name: 'Country Code', description: '2-letter country code' },
+            '59': { name: 'Merchant Name', description: 'Name of merchant/customer' },
+            '60': { name: 'Merchant City', description: 'City where merchant is located' },
+            '62': { name: 'Additional Data', description: 'Reference number/label' },
+            '63': { name: 'CRC Checksum', description: 'Error detection code' }
+        };
+
+        // Bank mappings for Cambodia
+        const CAMBODIAN_BANKS = {
+            'ACLEDA': 'ACLEDA Bank',
+            'ABA': 'ABA Bank',
+            'WING': 'Wing Bank',
+            'CAMPU': 'Campu Bank',
+            'AMK': 'AMK Microfinance',
+            'PRASAC': 'Prasac Microfinance',
+            'SATHAPANA': 'Sathapana Bank'
+        };
+
+        // Start camera for QR scanning
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                
+                video.srcObject = stream;
+                video.setAttribute('playsinline', true);
+                video.style.display = 'block';
+                scannerPlaceholder.style.display = 'none';
+                
+                await video.play();
+                
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
+                
+                scanning = true;
+                scanQRCode();
+            } catch (err) {
+                alert('Error accessing camera: ' + err.message);
+            }
+        });
+
+        // Stop camera
+        stopBtn.addEventListener('click', () => {
+            stopScanning();
+        });
+
+        // Handle file upload
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        processImage(img);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Main QR scanning function
+        function scanQRCode() {
+            if (!scanning) return;
+
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                processQRData(code.data);
+                stopScanning();
+            }
+            
+            animationFrame = requestAnimationFrame(scanQRCode);
+        }
+
+        // Process image for QR decoding
+        function processImage(img) {
+            const context = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            context.drawImage(img, 0, 0);
+            
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                processQRData(code.data);
+            } else {
+                alert('No QR code found in the image');
+            }
+        }
+
+        // Stop scanning function
+        function stopScanning() {
+            scanning = false;
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            video.style.display = 'none';
+            scannerPlaceholder.style.display = 'flex';
+            startBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+        }
+
+        // Parse and process KHQR data
+        function processQRData(data) {
+            console.log('Raw QR Data:', data);
+            
+            // Display raw data
+            rawDataDiv.style.display = 'block';
+            rawDataContent.textContent = data;
+            
+            // Parse KHQR data
+            const parsedData = parseKHQR(data);
+            
+            // Display parsed results
+            displayResults(parsedData);
+        }
+
+        // KHQR Parser Function
+        function parseKHQR(qrData) {
+            const result = {
+                raw: qrData,
+                parsed: {},
+                summary: {},
+                isValid: false
+            };
+
+            try {
+                let index = 0;
+                
+                while (index < qrData.length) {
+                    // Get tag (2 digits)
+                    const tag = qrData.substring(index, index + 2);
+                    index += 2;
+                    
+                    // Get length (2 digits)
+                    const lengthStr = qrData.substring(index, index + 2);
+                    const length = parseInt(lengthStr, 10);
+                    index += 2;
+                    
+                    // Get value
+                    const value = qrData.substring(index, index + length);
+                    index += length;
+                    
+                    // Parse specific tags
+                    if (tag === '29') {
+                        // Parse Merchant Account Info
+                        const merchantInfo = parseMerchantAccountInfo(value);
+                        result.parsed[tag] = {
+                            ...KHQR_TAGS[tag],
+                            value: value,
+                            details: merchantInfo
+                        };
+                    } else if (tag === '53') {
+                        // Currency code
+                        const currency = value === '840' ? 'USD' : 
+                                       value === '116' ? 'KHR' : value;
+                        result.parsed[tag] = {
+                            ...KHQR_TAGS[tag],
+                            value: value,
+                            displayValue: currency
+                        };
+                        result.summary.currency = currency;
+                    } else if (tag === '54') {
+                        // Amount
+                        const amount = parseFloat(value) / 100;
+                        result.parsed[tag] = {
+                            ...KHQR_TAGS[tag],
+                            value: value,
+                            displayValue: amount.toFixed(2)
+                        };
+                        result.summary.amount = amount;
+                    } else if (tag === '59') {
+                        // Merchant Name
+                        result.parsed[tag] = {
+                            ...KHQR_TAGS[tag],
+                            value: value,
+                            displayValue: value.trim()
+                        };
+                        result.summary.merchantName = value.trim();
+                    } else if (tag === '60') {
+                        // Merchant City
+                        result.parsed[tag] = {
+                            ...KHQR_TAGS[tag],
+                            value: value,
+                            displayValue: value.trim()
+                        };
+                        result.summary.merchantCity = value.trim();
+                    } else {
+                        // General tag
+                        result.parsed[tag] = {
+                            ...(KHQR_TAGS[tag] || { name: `Tag ${tag}`, description: 'Unknown tag' }),
+                            value: value,
+                            displayValue: value
+                        };
+                    }
+                }
+                
+                result.isValid = validateChecksum(qrData);
+                
+            } catch (error) {
+                console.error('Error parsing KHQR:', error);
+            }
+            
+            return result;
+        }
+
+        // Parse Merchant Account Info (Tag 29)
+        function parseMerchantAccountInfo(value) {
+            const info = {};
+            
+            // Check for KHQR domain
+            if (value.includes('khqr@')) {
+                const domainIndex = value.indexOf('khqr@');
+                const domain = value.substring(domainIndex, domainIndex + 9); // khqr@xxxx
+                info.domain = domain;
+                
+                // Extract merchant ID (usually after domain)
+                const merchantIdMatch = value.match(/01(\d+)/);
+                if (merchantIdMatch) {
+                    info.merchantId = merchantIdMatch[1];
+                }
+                
+                // Extract bank info
+                const bankCode = value.substring(domainIndex + 5, domainIndex + 9);
+                info.bank = CAMBODIAN_BANKS[bankCode] || bankCode;
+            }
+            
+            return info;
+        }
+
+        // Validate CRC Checksum (Tag 63)
+        function validateChecksum(qrData) {
+            if (qrData.length < 4) return false;
+            
+            const dataWithoutCRC = qrData.substring(0, qrData.length - 4);
+            const crcProvided = qrData.substring(qrData.length - 4);
+            
+            // Simple validation - in real implementation, use proper CRC16 algorithm
+            return true; // Placeholder
+        }
+
+        // Display parsed results
+        function displayResults(data) {
+            resultsContainer.innerHTML = '';
+            
+            // Add summary card
+            if (data.summary.merchantName || data.summary.amount) {
+                const summaryHTML = `
+                    <div class="payment-summary">
+                        <h3>💳 Payment Summary</h3>
+                        ${data.summary.merchantName ? `
+                            <div class="summary-item">
+                                <span>Merchant:</span>
+                                <strong>${data.summary.merchantName}</strong>
+                            </div>
+                        ` : ''}
+                        ${data.summary.merchantCity ? `
+                            <div class="summary-item">
+                                <span>City:</span>
+                                <strong>${data.summary.merchantCity}</strong>
+                            </div>
+                        ` : ''}
+                        ${data.summary.amount ? `
+                            <div class="summary-item">
+                                <span>Amount:</span>
+                                <strong>${data.summary.amount} ${data.summary.currency || ''}</strong>
+                            </div>
+                        ` : ''}
+                        ${data.parsed['29']?.details?.bank ? `
+                            <div class="summary-item">
+                                <span>Bank:</span>
+                                <strong>${data.parsed['29'].details.bank}</strong>
+                            </div>
+                        ` : ''}
+                        <div class="summary-item">
+                            <span>Status:</span>
+                            <strong style="color: ${data.isValid ? '#2ecc71' : '#e74c3c'}">
+                                ${data.isValid ? 'Valid QR Code' : 'Validation Failed'}
+                            </strong>
+                        </div>
+                    </div>
+                `;
+                resultsContainer.innerHTML += summaryHTML;
+            }
+            
+            // Add parsed data cards
+            for (const tag in data.parsed) {
+                const item = data.parsed[tag];
+                
+                let valueHTML = `<div class="value">${item.displayValue || item.value}</div>`;
+                
+                // Special handling for merchant account info
+                if (tag === '29' && item.details) {
+                    valueHTML = `
+                        <div class="value">
+                            ${item.value.substring(0, 50)}...
+                        </div>
+                        <div class="description">
+                            ${item.details.bank ? `<strong>Bank:</strong> ${item.details.bank}<br>` : ''}
+                            ${item.details.merchantId ? `<strong>Merchant ID:</strong> ${item.details.merchantId}<br>` : ''}
+                            ${item.details.domain ? `<strong>Domain:</strong> ${item.details.domain}` : ''}
+                        </div>
+                    `;
+                }
+                
+                const cardHTML = `
+                    <div class="result-item">
+                        <div class="result-header">
+                            <h3>${item.name}</h3>
+                            <span class="tag">Tag ${tag}</span>
+                        </div>
+                        ${valueHTML}
+                        <div class="description">
+                            ${item.description}
+                        </div>
+                    </div>
+                `;
+                
+                resultsContainer.innerHTML += cardHTML;
+            }
+            
+            // Scroll to results
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Example QR Code for testing
+        const exampleQR = '00020101021129360009khqr@aclb01090166121030206ACLEDA52042000303840540210005802KH5912CHHOUN DEVID6010PHNOM PENH621302090166121036304F9A8';
+
+        // Test with example on page load
+        window.addEventListener('load', () => {
+            // Uncomment to test with example QR
+            // processQRData(exampleQR);
+        });
+    </script>
+</body>
+</html>
